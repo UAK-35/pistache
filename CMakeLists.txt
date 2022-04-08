@@ -107,6 +107,11 @@ if(PISTACHE_INSTALL)
             DESTINATION
             ${CMAKE_INSTALL_LIBDIR}/pkgconfig/
     )
+
+    file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/uninstall.cmake DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+    add_custom_target(uninstall
+            "${CMAKE_COMMAND}" -P "${CMAKE_CURRENT_BINARY_DIR}/uninstall.cmake"
+            )
 endif()
 
 add_subdirectory (src)
