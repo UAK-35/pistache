@@ -29,6 +29,7 @@ option(PISTACHE_ENABLE_NETWORK_TESTS "if tests are built, run ones needing netwo
 option(PISTACHE_USE_SSL "add support for SSL server" OFF)
 option(PISTACHE_PIC "Enable pistache PIC" ON)
 option(PISTACHE_BUILD_FUZZ "Build fuzzer for oss-fuzz" OFF)
+option(PISTACHE_INSTALL "add pistache as install target (recommended)" ON)
 
 # require fat LTO objects in static library
 if(CMAKE_INTERPROCEDURAL_OPTIMIZATION OR CMAKE_CXX_FLAGS MATCHES "-flto" OR CMAKE_CXX_FLAGS MATCHES "-flto=thin")
@@ -52,11 +53,61 @@ set(VERSION_MAJOR    ${pistache_VERSION_MAJOR})
 set(VERSION_MINOR    ${pistache_VERSION_MINOR})
 set(VERSION_PATCH    ${pistache_VERSION_PATCH})
 set(VERSION_GIT_DATE ${pistache_VERSION_TWEAK})
+# Make available in a header file...
 configure_file (
-    "include/pistache/version.h.in"
-    "include/pistache/version.h"
-    @ONLY
+        "include/pistache/version.h.in"
+        "include/pistache/version.h"
+        @ONLY
 )
+
+if(PISTACHE_INSTALL)
+
+    # Install version header...
+    install (
+            FILES
+            ${CMAKE_CURRENT_BINARY_DIR}/include/pistache/version.h
+            DESTINATION
+            ${CMAKE_INSTALL_INCLUDEDIR}/pistache/
+    )
+
+    # Set libraries that we need to link against...
+
+    # Minimum...
+    set(LIBS "-lpistache -lpthread")
+    if (NOT HAVE_CXX_ATOMICS64_WITHOUT_LIB)
+        set(LIBS "-latomic")
+    endif ()
+
+    # If building with OpenSSL support...
+    if(PISTACHE_USE_SSL)
+        set(LIBS "${LIBS} -lssl -lcrypto")
+    endif(PISTACHE_USE_SSL)
+
+    # Configure the pkg-config metadata...
+
+    # Initialize the metadata variables and to support remote builds...
+    set(prefix         ${CMAKE_INSTALL_PREFIX})
+    set(exec_prefix    ${CMAKE_INSTALL_PREFIX}/bin)
+    set(libdir         ${CMAKE_INSTALL_FULL_LIBDIR}/)
+    set(libs           ${LIBS})
+    set(includedir     ${CMAKE_INSTALL_FULL_INCLUDEDIR}/)
+    set(version        ${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}-git${VERSION_GIT_DATE})
+
+    # Perform substitutions...
+    configure_file (
+            "libpistache.pc.in"
+            "libpistache.pc"
+            @ONLY
+    )
+
+    # Install pkg-config metadata into standard location within the prefix...
+    install (
+            FILES
+            ${CMAKE_CURRENT_BINARY_DIR}/libpistache.pc
+            DESTINATION
+            ${CMAKE_INSTALL_LIBDIR}/pkgconfig/
+    )
+endif()
 
 add_subdirectory (src)
 

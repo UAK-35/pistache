@@ -49,6 +49,12 @@ endif()
 target_include_directories(pistache PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../subprojects/hinnant-date/include)
 target_include_directories(pistache PUBLIC ${PISTACHE_INCLUDE})
 
+if (PISTACHE_INSTALL)
+    set(include_install_dir ${CMAKE_INSTALL_INCLUDEDIR})
+    set(lib_install_dir ${CMAKE_INSTALL_LIBDIR})
+    set(bin_install_dir ${CMAKE_INSTALL_BINDIR})
+endif()
+
 if (BUILD_SHARED_LIBS)
     add_library(pistache_shared SHARED $<TARGET_OBJECTS:pistache>)
     target_link_libraries(pistache_shared PRIVATE Threads::Threads ${CMAKE_REQUIRED_LIBRARIES})
@@ -82,3 +88,50 @@ endif ()
 set_target_properties(pistache_static PROPERTIES
     OUTPUT_NAME ${PROJECT_NAME}
 )
+
+if (PISTACHE_INSTALL)
+    set(Pistache_CMAKE_INSTALL_PATH "${CMAKE_INSTALL_LIBDIR}/cmake/pistache")
+    set(Pistache_CONFIG_FILE "PistacheConfig.cmake")
+    set(Pistache_CONFIG_VERSION_FILE "PistacheConfigVersion.cmake")
+
+    if (BUILD_SHARED_LIBS)
+        install(
+          TARGETS pistache_shared
+          EXPORT PistacheTargets
+          ARCHIVE DESTINATION ${lib_install_dir}
+          LIBRARY DESTINATION ${lib_install_dir}
+          RUNTIME DESTINATION ${bin_install_dir}
+          INCLUDES DESTINATION ${include_install_dir})
+    endif ()
+
+    install(
+      DIRECTORY "${PROJECT_SOURCE_DIR}/include/pistache"
+      DESTINATION ${include_install_dir}
+      FILES_MATCHING PATTERN "*.*h")
+    install(TARGETS pistache_static
+            EXPORT PistacheTargets
+            DESTINATION ${CMAKE_INSTALL_LIBDIR})
+    install(EXPORT PistacheTargets
+            DESTINATION ${Pistache_CMAKE_INSTALL_PATH}
+            EXPORT_LINK_INTERFACE_LIBRARIES
+            COMPONENT cmake-config
+    )
+
+    include(CMakePackageConfigHelpers)
+    configure_package_config_file(
+        "${Pistache_CONFIG_FILE}.in"
+        "${CMAKE_CURRENT_BINARY_DIR}/${Pistache_CONFIG_FILE}"
+        INSTALL_DESTINATION ${Pistache_CMAKE_INSTALL_PATH}
+        PATH_VARS include_install_dir lib_install_dir
+    )
+    write_basic_package_version_file(
+        "${CMAKE_CURRENT_BINARY_DIR}/${Pistache_CONFIG_VERSION_FILE}"
+        VERSION ${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}
+        COMPATIBILITY AnyNewerVersion)
+    install(
+        FILES "${CMAKE_CURRENT_BINARY_DIR}/${Pistache_CONFIG_FILE}"
+        "${CMAKE_CURRENT_BINARY_DIR}/${Pistache_CONFIG_VERSION_FILE}"
+        DESTINATION ${Pistache_CMAKE_INSTALL_PATH}
+        COMPONENT cmake-config
+    )
+endif()
